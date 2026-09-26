@@ -48,5 +48,5 @@ intervals = [(0, 8), (8, 16), (16, 24), (24, 32), (32, 40)]
 for i in range(5):
     a_val, b_val, c_val = x[3 * i], x[3 * i + 1], x[3 * i + 2]
     print(
-        f"Interval {intervals[i]}: s_{i+1}(T) = ({a_val:.8f})*T^2 + ({b_val:.8f})*T + ({c_val:.8f})"
+        f"Interval {intervals[i]}: s_{i+1}(T) = ({a_val:.3f})*T^2 + ({b_val:.3f})*T + ({c_val:.3f})"
     )
