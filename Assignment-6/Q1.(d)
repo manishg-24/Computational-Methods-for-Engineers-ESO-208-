@@ -1,1 +1,94 @@
+import matplotlib.pyplot as plt
+import numpy as np
 
+T_data = np.array([0, 8, 16, 24, 32, 40], dtype=float)
+O_data = np.array([14.621, 11.843, 9.870, 8.418, 7.305, 6.413], dtype=float)
+
+T_dense = np.linspace(0, 40, 500)
+
+
+a = [
+    14.621,
+    -0.347,
+    0.006,
+    -9.24e-05,
+    1.03e-06,
+    -9.66e-09,
+]
+def eval_newton(t):
+    val = a[0]
+    prod = 1.0
+    for i in range(1, 6):
+        prod *= t - T_data[i - 1]
+        val += a[i] * prod
+    return val
+
+
+O_newton = np.array([eval_newton(t) for t in T_dense])
+
+spline_coeffs_global = [
+    (0.000, -0.347, 14.621),  # 0 <= T <= 8
+    (0.013, -0.549, 15.426),  # 8 <= T <= 16
+    (-0.004, -0.004, 11.070),  # 16 <= T <= 24
+    (0.010, -0.684, 19.233),  # 24 <= T <= 32
+    (-0.006, 0.341, 2.833),  # 32 <= T <= 40
+]
+
+
+def eval_spline(t):
+    if t <= 8:
+        i = 0
+    elif t <= 16:
+        i = 1
+    elif t <= 24:
+        i = 2
+    elif t <= 32:
+        i = 3
+    else:
+        i = 4
+
+    a_i, b_i, c_i = spline_coeffs[i]
+    dt = t - T_data[i]
+    return a_i + b_i * dt + c_i * (dt**2)
+
+
+O_spline = np.array([eval_spline(t) for t in T_dense])
+
+plt.figure(figsize=(9, 6))
+
+plt.scatter(
+    T_data,
+    O_data,
+    color="black",
+    s=60,
+    zorder=5,
+    label="Data Points (Table)",
+)
+
+plt.plot(
+    T_dense,
+    O_newton,
+    "b-",
+    linewidth=2,
+    label="Newton's 5th Order Polynomial",
+)
+plt.plot(
+    T_dense,
+    O_spline,
+    "r--",
+    linewidth=2,
+    label="Quadratic Spline",
+)
+
+plt.xlabel("Temperature $T$ (°C)", fontsize=12)
+plt.ylabel("Dissolved Oxygen $O$ (mg/L)", fontsize=12)
+plt.title(
+    "Comparison of Newton's Polynomial and Quadratic Spline Interpolation",
+    fontsize=13,
+)
+plt.xlim(0, 40)
+plt.grid(True, linestyle=":", alpha=0.7)
+plt.legend(fontsize=11)
+plt.tight_layout()
+
+plt.show()
