@@ -1,94 +1,96 @@
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 T_data = np.array([0, 8, 16, 24, 32, 40], dtype=float)
 O_data = np.array([14.621, 11.843, 9.870, 8.418, 7.305, 6.413], dtype=float)
+n = len(T_data)
 
-T_dense = np.linspace(0, 40, 500)
+def divided_diff_coeffs(x, y):
+    m = len(x)
+    table = np.zeros((m, m))
+    table[:, 0] = y
+    for j in range(1, m):
+        for i in range(m - j):
+            table[i, j] = (table[i + 1, j - 1] - table[i, j - 1]) / (x[i + j] - x[i])
+    return table[0, :]
 
+a = divided_diff_coeffs(T_data, O_data)
 
-a = [
-    14.621,
-    -0.347,
-    0.006,
-    -9.24e-05,
-    1.03e-06,
-    -9.66e-09,
-]
 def eval_newton(t):
     val = a[0]
     prod = 1.0
-    for i in range(1, 6):
-        prod *= t - T_data[i - 1]
+    for i in range(1, n):
+        prod *= (t - T_data[i - 1])
         val += a[i] * prod
     return val
 
+m = n - 1
+nunk = 3 * m
+A = np.zeros((nunk, nunk))
+rhs = np.zeros(nunk)
+row = 0
 
-O_newton = np.array([eval_newton(t) for t in T_dense])
+for i in range(m):
+    dT1 = T_data[i + 1] - T_data[i]
+    A[row, 3 * i] = 1.0
+    rhs[row] = O_data[i]
+    row += 1
+    A[row, 3 * i], A[row, 3 * i + 1], A[row, 3 * i + 2] = 1.0, dT1, dT1 ** 2
+    rhs[row] = O_data[i + 1]
+    row += 1
 
-spline_coeffs_global = [
-    (0.000, -0.347, 14.621),  # 0 <= T <= 8
-    (0.013, -0.549, 15.426),  # 8 <= T <= 16
-    (-0.004, -0.004, 11.070),  # 16 <= T <= 24
-    (0.010, -0.684, 19.233),  # 24 <= T <= 32
-    (-0.006, 0.341, 2.833),  # 32 <= T <= 40
-]
+for i in range(m - 1):
+    dT1 = T_data[i + 1] - T_data[i]
+    A[row, 3 * i + 1], A[row, 3 * i + 2] = 1.0, 2 * dT1
+    A[row, 3 * (i + 1) + 1] = -1.0
+    row += 1
 
+A[row, 2] = 1.0
+row += 1
+
+def gauss_elim(A, b):
+    A, b = A.copy(), b.copy()
+    N = len(b)
+    for k in range(N - 1):
+        p = np.argmax(np.abs(A[k:, k])) + k
+        if p != k:
+            A[[k, p]] = A[[p, k]]
+            b[[k, p]] = b[[p, k]]
+        for i in range(k + 1, N):
+            factor = A[i, k] / A[k, k]
+            A[i, k:] -= factor * A[k, k:]
+            b[i] -= factor * b[k]
+    x = np.zeros(N)
+    x[-1] = b[-1] / A[-1, -1]
+    for i in range(N - 2, -1, -1):
+        x[i] = (b[i] - np.dot(A[i, i + 1:], x[i + 1:])) / A[i, i]
+    return x
+
+spline_coeffs = gauss_elim(A, rhs).reshape(m, 3)
 
 def eval_spline(t):
-    if t <= 8:
-        i = 0
-    elif t <= 16:
-        i = 1
-    elif t <= 24:
-        i = 2
-    elif t <= 32:
-        i = 3
-    else:
-        i = 4
-
+    if t <= T_data[1]: i = 0
+    elif t <= T_data[2]: i = 1
+    elif t <= T_data[3]: i = 2
+    elif t <= T_data[4]: i = 3
+    else: i = 4
     a_i, b_i, c_i = spline_coeffs[i]
     dt = t - T_data[i]
-    return a_i + b_i * dt + c_i * (dt**2)
+    return a_i + b_i * dt + c_i * dt ** 2
 
-
+T_dense = np.linspace(0, 40, 500)
+O_newton = np.array([eval_newton(t) for t in T_dense])
 O_spline = np.array([eval_spline(t) for t in T_dense])
 
 plt.figure(figsize=(9, 6))
-
-plt.scatter(
-    T_data,
-    O_data,
-    color="black",
-    s=60,
-    zorder=5,
-    label="Data Points (Table)",
-)
-
-plt.plot(
-    T_dense,
-    O_newton,
-    "b-",
-    linewidth=2,
-    label="Newton's 5th Order Polynomial",
-)
-plt.plot(
-    T_dense,
-    O_spline,
-    "r--",
-    linewidth=2,
-    label="Quadratic Spline",
-)
-
+plt.scatter(T_data, O_data, color="black", s=60, zorder=5, label="Data Points (Table)")
+plt.plot(T_dense, O_newton, "b-", linewidth=2, label="Newton's 5th Order Polynomial")
+plt.plot(T_dense, O_spline, "r--", linewidth=2, label="Quadratic Spline")
 plt.xlabel("Temperature $T$ (°C)", fontsize=12)
 plt.ylabel("Dissolved Oxygen $O$ (mg/L)", fontsize=12)
-plt.title(
-    "Comparison of Newton's Polynomial and Quadratic Spline Interpolation",
-    fontsize=13,
-)
+plt.title("Comparison of Newton's Polynomial and Quadratic Spline Interpolation", fontsize=13)
 plt.xlim(0, 40)
 plt.grid(True, linestyle=":", alpha=0.7)
 plt.legend(fontsize=11)
 plt.tight_layout()
-
 plt.show()
