@@ -2,7 +2,7 @@ import numpy as np
 Q=lambda t: 8+5*np.cos(0.4*t)**2
 c=lambda t: 5*np.exp(-0.5*t)+3*np.exp(0.15*t)
 f=lambda t: Q(t)*c(t)
-a,b=2.,8.; tol=0.1  # percent
+a,b=2.,8.; tol=0.1*100 
 R=[[0.5*(b-a)*(f(a)+f(b))]]; print("k=1  R11=%.6f"%R[0][0])
 k=1
 while True:
