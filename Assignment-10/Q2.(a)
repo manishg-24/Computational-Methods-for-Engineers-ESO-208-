@@ -1,1 +1,46 @@
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
+K, C, rho = 0.49, 0.2174, 2.7
+alpha = K/(rho*C)
+L, dx, dt = 10.0, 2.0, 0.1
+lam = alpha*dt/dx**2
+x = np.arange(0, L+dx/2, dx); n = len(x)
+g0, gL = 1.0, 0.0
+
+A = np.zeros((n, n)); B = np.zeros((n, n)); d = np.zeros(n)
+for i in range(1, n-1):
+    A[i, i-1:i+2] = [-lam/2, 1+lam, -lam/2]
+    B[i, i-1:i+2] = [ lam/2, 1-lam,  lam/2]
+A[0, :2] = [1+lam, -lam];  B[0, :2] = [1-lam, lam];  d[0] = -2*lam*dx*g0
+A[-1, -2:] = [-lam, 1+lam]; B[-1, -2:] = [lam, 1-lam]; d[-1] = 2*lam*dx*gL
+
+def gauss(A, b):
+    A = A.astype(float).copy(); b = b.astype(float).copy(); m = len(b)
+    for k in range(m-1):
+        p = np.argmax(abs(A[k:, k])) + k
+        if p != k: A[[k, p]] = A[[p, k]]; b[[k, p]] = b[[p, k]]
+        for r in range(k+1, m):
+            f = A[r, k]/A[k, k]; A[r, k:] -= f*A[k, k:]; b[r] -= f*b[k]
+    s = np.zeros(m)
+    for r in range(m-1, -1, -1): s[r] = (b[r]-A[r, r+1:] @ s[r+1:])/A[r, r]
+    return s
+
+T = np.full(n, 50.0)
+print(f"alpha = {alpha:.4f} cm^2/s, lambda = {lam:.5f}")
+save_t = [6, 12, 18, 24, 30]; prof = {}
+nsteps = int(round(max(save_t)/dt))
+for step in range(1, nsteps+1):
+    T = gauss(A, B @ T + d)
+    t = step*dt
+    for ts in save_t:
+        if abs(t-ts) < 1e-9: prof[ts] = T.copy()
+
+print("x (cm):", x)
+for ts in save_t: print(f"t = {ts:2d} s :", np.round(prof[ts], 3))
+plt.figure(figsize=(7, 4.5))
+for ts in save_t: plt.plot(x, prof[ts], "o-", label=f"t = {ts} s")
+plt.xlabel("x (cm)"); plt.ylabel("T (°C)"); plt.title("Rod temperature (Crank–Nicolson, Δx=2 cm, Δt=0.1 s)")
+plt.grid(alpha=.3); plt.legend(); plt.tight_layout(); plt.savefig("q2_plot.png", dpi=150)
