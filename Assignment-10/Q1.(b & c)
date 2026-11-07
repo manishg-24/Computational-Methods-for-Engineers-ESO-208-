@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 K = 0.49
@@ -83,4 +81,4 @@ ax[0].plot(X, Y, "k.", ms=3); ax[0].set_title("Temperature profile"); ax[0].set_
 c2 = ax[1].contourf(X, Y, qmag, 20, cmap="viridis"); fig.colorbar(c2, ax=ax[1], label="|q| (cal/s·cm²)")
 ax[1].quiver(X, Y, qx, qy, color="w"); ax[1].set_title("Heat flux (vectors, magnitude)")
 ax[1].set_xlabel("x (cm)"); ax[1].set_ylabel("y (cm)")
-plt.tight_layout(); plt.savefig("q1_plots.png", dpi=150)
+plt.tight_layout(); plt.show()
